@@ -3,7 +3,7 @@
 # Corresponds to question 2 in Homework 1
 # DUE: February 5th, 2026
 
-import time  # Added import for timing
+import time
 from queue import PriorityQueue
 from typing import Tuple, List, Optional, Dict
 
