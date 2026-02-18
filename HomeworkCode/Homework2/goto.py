@@ -8,24 +8,38 @@
 #
 #
 
+# Aidan Rohm ----- Modifications made to this file in accordance to Homework 2 ----- 2/19/26
+
 import math
 import sys
 import rospy # needed for ROS
+import numpy as np
+import matplotlib.pyplot as plt
 
 from geometry_msgs.msg import Twist      # ROS Twist message
 from nav_msgs.msg import Odometry
+from sensor_msgs.msg import LaserScan			        # ROS laser msg
+from tf.transformations import euler_from_quaternion 	# Manipulate angles
 
 #topics 
-
+laserTopic = '/scan' 		# Name for the laser scan topic
 motionTopic='/cmd_vel'
 poseTopic = '/odom' 
 
-from tf.transformations import euler_from_quaternion
-
-
 # global variable
-
 gLoc = [0,0,0]    # pose of the robot
+
+#
+# laserCallback
+# This procedure is called to accept ROS Laser topic info
+#
+def callback_laser(msg):
+    '''Call back function for laser range data'''
+    # Loop for each range value from the sensor
+    for i, reading in enumerate(msg.ranges):
+        if not math.isnan( reading ) and not math.isinf( reading) and reading > 0:
+            # TODO: COMPLETE NECESSARY CODE HERE
+    return
 
 #
 # poseCallback
@@ -49,6 +63,23 @@ def dist(x1,y1,x2,y2):
     dely = y2-y1
     d = math.sqrt( delx*delx+dely*dely)
     return d
+    
+def toCartesian(x, y, theta, a, d):
+    '''Convert a single laser reading (angle a and distance d) into map related coordinates'''
+    
+    # Convert the laser angle to radians
+    a_rad = math.radians(a)
+    
+    # Point in the robot's frame
+    x_r = d * math.cos(a_rad)
+    y_r = d * math.sin(a_rad)
+    
+    # Rotate into the map frame and translate
+    X = x + x_r * math.cos(theta) - y_r * math.sin(theta)
+    Y = y + x_r * math.sin(theta) + y_r * math.sin(theta)
+    
+    return X, Y
+    
 
 # goto_node
 # this procedure generates the velocity commands
@@ -65,6 +96,7 @@ def gotoTG_node(goalx, goaly):
     pub = rospy.Publisher(motionTopic, Twist, queue_size=0)
     # register as a subscriber for the pose topic
     rospy.Subscriber(poseTopic, Odometry, poseCallback)
+    scan_sub = rospy.Subscriber(laserTopic, LaserScan, callback_laser)
     rospy.sleep(1) # wait for everything to start
 
     # this is how frequently the message is published
