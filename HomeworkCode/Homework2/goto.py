@@ -65,7 +65,7 @@ def world_to_map(X, Y):
     c = int((X - MAP_ORIGIN_X) / MAP_RES)
     r = int((Y - MAP_ORIGIN_Y) / MAP_RES)
 
-    if 0 <= r MAP_H_CELLS and 0 <= c < MAP_W_CELLS:
+    if 0 <= r < MAP_H_CELLS and 0 <= c < MAP_W_CELLS:
         return r, c
     
     return None
