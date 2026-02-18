@@ -26,19 +26,74 @@ laserTopic = '/scan' 		# Name for the laser scan topic
 motionTopic='/cmd_vel'
 poseTopic = '/odom' 
 
-# global variable
-gLoc = [0,0,0]    # pose of the robot
+# ------------------ GLOBAL VARIABLES -----------------
+gLoc = [0,0,0]              # Pose of the robot
 
-#
-# laserCallback
-# This procedure is called to accept ROS Laser topic info
-#
+# ------------------ SIMPLE MAP SETTINGS -----------------
+MAP_RES = .10           # Meters per cell
+MAP_W_CELLS = 120       # Width in cells
+MAP_H_CELLS = 120       # Height in cells
+
+MAP_W_M = MAP_W_CELLS * MAP_RES # Width in meters
+MAP_H_M = MAP_H_CELLS * MAP_RES # Height in meters
+
+# Putting (0, 0) at the middle of the map
+MAP_ORIGIN_X = -MAP_W_M/2
+MAP_ORIGIN_Y = -MAP_H_M/2
+
+occ_map = np.zeros((MAP_W_CELLS, MAP_H_CELLS), dtype=np.uint8) # Occupancy map (0=free, 1=occupied)
+
+# ------------------ (1) LASER DATA -> CARTESIAN COORDINATES -----------------
+def toCartesian(x, y, theta, a, d):
+    '''Convert a single laser reading (angle a and distance d) into map related coordinates'''
+    
+    # Convert the laser angle to radians
+    a_rad = math.radians(a)
+    
+    # Point in the robot's frame
+    x_r = d * math.cos(a_rad)
+    y_r = d * math.sin(a_rad)
+    
+    # Rotate into the map frame and translate
+    X = x + x_r * math.cos(theta) - y_r * math.sin(theta)
+    Y = y + x_r * math.sin(theta) + y_r * math.sin(theta)
+    
+    return X, Y
+
+def world_to_map(X, Y):
+    '''Converting world coordinates to map indices'''
+    c = int((X - MAP_ORIGIN_X) / MAP_RES)
+    r = int((Y - MAP_ORIGIN_Y) / MAP_RES)
+
+    if 0 <= r MAP_H_CELLS and 0 <= c < MAP_W_CELLS:
+        return r, c
+    
+    return None
+
+# ------------------ (2) LASER CALLBACK FUNCTION -----------------
 def callback_laser(msg):
     '''Call back function for laser range data'''
+    global occ_map, gLoc
+
+    x, y, theta = gLoc[0], gLoc[1], gLoc[2]
+
     # Loop for each range value from the sensor
     for i, reading in enumerate(msg.ranges):
         if not math.isnan( reading ) and not math.isinf( reading) and reading > 0:
-            # TODO: COMPLETE NECESSARY CODE HERE
+            continue
+
+        # ROS laser angles come in radians, convert to degrees
+        angle_rad = msg.angle_min + i * msg.angle_increment
+        angle_deg = math.degrees(angle_rad) & 360.0
+
+        X, Y = toCartesian(x, y, theta, angle_deg, reading)
+
+        r, c = world_to_map(X, Y)
+        if rc is None:
+            continue
+        
+        occ_map[r, c] = 1 # Mark the cell as occupied
+
     return
 
 #
@@ -64,23 +119,7 @@ def dist(x1,y1,x2,y2):
     d = math.sqrt( delx*delx+dely*dely)
     return d
     
-def toCartesian(x, y, theta, a, d):
-    '''Convert a single laser reading (angle a and distance d) into map related coordinates'''
-    
-    # Convert the laser angle to radians
-    a_rad = math.radians(a)
-    
-    # Point in the robot's frame
-    x_r = d * math.cos(a_rad)
-    y_r = d * math.sin(a_rad)
-    
-    # Rotate into the map frame and translate
-    X = x + x_r * math.cos(theta) - y_r * math.sin(theta)
-    Y = y + x_r * math.sin(theta) + y_r * math.sin(theta)
-    
-    return X, Y
-    
-
+#
 # goto_node
 # this procedure generates the velocity commands
 # to move the turtlebot (TG) to a goal x and y 
@@ -94,9 +133,10 @@ def gotoTG_node(goalx, goaly):
 
     # register as a ROS publisher for the velocity topic 
     pub = rospy.Publisher(motionTopic, Twist, queue_size=0)
+    
     # register as a subscriber for the pose topic
     rospy.Subscriber(poseTopic, Odometry, poseCallback)
-    scan_sub = rospy.Subscriber(laserTopic, LaserScan, callback_laser)
+    rospy.Subscriber(laserTopic, LaserScan, callback_laser)
     rospy.sleep(1) # wait for everything to start
 
     # this is how frequently the message is published
@@ -105,36 +145,50 @@ def gotoTG_node(goalx, goaly):
     ctr = 0       # counter used to produce messages
     angularGain = 1.0 #  gain for angular velocity error
     linearGain = 0.1  #  gain for linear velocity error
+    
     while not rospy.is_shutdown() and dist(goalx,goaly,gLoc[0], gLoc[1])>0.5:
 
         targetTheta = math.atan2(goaly-gLoc[1], goalx-gLoc[0])
         delTheta =  targetTheta - gLoc[2] # angular error
+        
         if delTheta>0: # pick smallest way to turn
             altTheta = delTheta - 2*math.pi
         else:
             altTheta = delTheta + 2*math.pi
         if abs(delTheta)>abs(altTheta):
             delTheta = altTheta
+        
         # allow for occasional status
         if ctr>20:
             print (round(gLoc[0],2), round(gLoc[1],2) )
             ctr=0
         else:
             ctr = ctr+1
-            
+
+        # Simple proportional control for the velocities of the robot    
         msg.angular.z = 1.0 * delTheta # should saturate angular velocity
         delDist = dist(goalx,goaly,gLoc[0], gLoc[1]) # distance error
         msg.linear.x = 0.1 * delDist # should saturate linear velocity
 
         pub.publish(msg)
         rate.sleep()
+    
     print  ("Done ","d=",round(dist(goalx,goaly,gLoc[0], gLoc[1]),2))
     print  (" Loc= ",round(gLoc[0],2), round(gLoc[1],2)) 
     
-    #reset the velocities to 0
+    # reset the velocities to 0 --> effectively stopping the robot
     msg.angular.z = 0
     msg.linear.x = 0
     pub.publish(msg)
+
+    # ------------------ DISPLAY THE OCCUPANCY MAP -----------------
+    plt.figure()
+    plt.title("Occupancy hit map (1 = Surface detected, 0 = No surface detected)")
+    plt.imshow(occ_map, origin='lower', interpolation='nearest')
+    plt.xlabel("Map X-axis (cells)")
+    plt.ylabel("Map Y-axis (cells)")
+    plt.show()
+    
     return
     
 def callback_shutdown():
@@ -146,7 +200,6 @@ def callback_shutdown():
     pub.publish(msg) 
     rospy.sleep(1)
     return
-
 
 #-------------------------------MAIN  program----------------------
 if __name__ == '__main__':
