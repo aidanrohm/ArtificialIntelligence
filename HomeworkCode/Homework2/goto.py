@@ -97,30 +97,25 @@ def callback_laser(msg):
     # Loop for each range value from the sensor
     for i, reading in enumerate(msg.ranges):
 
-        # Skip invalid readings (NaN/inf) and out-of-range values
-        if not math.isnan(reading) and \ 
-            not math.isinf(reading) and reading > 0:
-            continue
+        if not math.isnan(reading) and not math.isinf(reading) and reading > 0:
+            
+            # ROS laser angles come in radians
+            angle_rad = msg.angle_min + i * msg.angle_increment
 
-        # ROS laser angles come in radians
-        angle_rad = msg.angle_min + i * msg.angle_increment
+            # Determine the coordinates of the detected surface in the map frame
+            X, Y = toCartesian(x, y, theta, angle_rad, reading)
 
-        # Determine the coordinates of the detected surface in the map frame
-        X, Y = toCartesian(x, y, theta, angle_rad, reading)
+            # Safety check
+            if not (math.isfinite(X) and math.isfinite(Y)):
+                continue
 
-        # Safety check
-        if not (math.isfinite(X) and math.isfinite(Y)):
-            continue
+            # Translate the world coordinates (X,Y) into map array indices (r,c)
+            rc = world_to_map(X, Y)
+            if rc is None:
+                continue
 
-        # Translate the world coordinates (X,Y) into map array indices (r,c)
-        rc = world_to_map(X, Y)
-        if rc is None:
-            continue
-
-        # Extract individual indices
-        r, c = rc
-
-        occ_map[r, c] = 1  # Mark the cell as occupied
+            r, c = rc
+            occ_map[r, c] = 1  # Mark the cell as occupied
 
     return
 
