@@ -1,4 +1,4 @@
-!#!/usr/bin/env python
+#!/usr/bin/env python
 # license removed for brevity
 #
 # Example program that calls a 
@@ -137,12 +137,17 @@ if __name__ == '__main__':
         path = pplib.planPath(start,goal)
         gLogging=True
         print("Starting path from ",start," to ",goal)
+        
         plast=path[0]
         for p in path:
-                  
-            #check if the distance from p to plast is more than 1
-            #call the goto node with the point in that case
-            #update plast to the last point you asked goto to go to
+            if dist(p[0], p[1], plast[0], plast[1]) > 1.0:
+                print("Going to waypoint:", p)
+                goto_node(pub, p[0], p[1])
+                plast = p
+                
+        if dist(goal[0], goal[1], plast[0], plast[1]) > 0.5:
+            print("Going to final goal:", goal)
+            goto_node(pub, goal[0], goal[1])    
 
         print("Finished Path, at ",goal)
         gLogging=False

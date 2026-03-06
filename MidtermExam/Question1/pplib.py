@@ -4,8 +4,7 @@
 #
 
 import copy
-#import astar as s # A* search
-import bfs as s  # BFS search
+import rohm_astar as s  # A* search
 import numpy as np
 import matplotlib.pyplot as plt
 
