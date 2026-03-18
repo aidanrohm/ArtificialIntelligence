@@ -1,7 +1,7 @@
 #
 #
 #
-import minimax as mx # Replace with minimaxMC when I have it working
+import rohm_minimaxMC as mx # Replace with minimaxMC when I have it working
 
 
 def search(state):
