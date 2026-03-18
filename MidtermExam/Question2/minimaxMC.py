@@ -1,8 +1,9 @@
-#
-# Minimax search for the TTT game
-# c dml 2019
-#
-#
+# 
+# Aidan Rohm - Artificial Intelligence
+# Midterm Exam Question 2
+# Minimax Search for Tic Tac Toe
+# 
+
 # State[i][j] = i,j element of board ="X", "O" or " "
 # Assumes O is the agent and X the opponent
 #
@@ -65,6 +66,43 @@ def extractmove(a,b):
             if a[i][j]!=b[i][j]:
                 return (i,j)
 
+# Check whether X has an inevitable win within 2 ply (O -> X)
+# Based on the pseudocode developed from Parts A and B
+#   Ply 1: O plays somewhere (all possible moves are checked)
+#   Ply 2: X responds -> does X have a winning follow up for every O move?
+# Returns True if X wins inevidably, False otherwise
+def win_inevitable_2ply(s):
+    '''Return True if X has an inevitable win within 2 ply (O -> X), False otherwise'''
+
+    # Ply 1: try ALL possible O moves on the current board
+    # Assuming that X can win no matter what
+    x_wins_all_responses = True
+
+    for board_after_o in expand(s, 'O'):
+
+        # If O wins immediately after ply 1 -> X cannot win
+        if wins(board_after_o, 'O'):
+            wins_x_all_responses = False
+            break
+        
+        # Ply 2: check if ANY of X's responses win
+        # A default flag, assuming that X cannot win
+        x_can_win = False
+
+        for board_after_x in expand(board_after_o, 'X'):
+
+            # Check whether X wins in this resulting board state
+            if wins(board_after_x, 'X'):
+                x_can_win = True
+                break # X has a winning reply to this O move
+
+        # Only executes if there is no win for X after ply 2
+        if not x_can_win:
+            x_wins_all_responses = False
+            break # X does not have a winning reply to this O move
+    
+    return x_wins_all_responses
+
 #minimax MAX step
 
 def maxval(s):
@@ -105,16 +143,31 @@ def minimax(s):
     global gNodes,gNodesList
     
     gNodes = 0
+    
+    # Check for terminal state first before proceeding
+    isTerminal, util = terminal(s)
+    if isTerminal:
+        print("Terminal state reached")
+        gNodesList.append(gNodes)
+        return None
+    
+    # Check if X has an inevitable win within 2 ply (O -> X)
+    # If so, print a warning - no O move can prevent X from winning
+    if win_inevitable_2ply(s):
+        print("2-ply check: X has an inevitable win regardless of O's response")
+
+    # Fall through to full minimax search regardless
     v = -100 # -ve infinity
     move = s
+
     for g in expand(s,'O'):
         mv = minval(g)
         if mv>v:
             v = mv
             move = g
     action = extractmove(s,move)
-    
-    print("Nodes expanded in this move: ",gNodes)
+
+    print("Nodes expanded in this move: ", gNodes)
     gNodesList.append(gNodes)
-    
+
     return action

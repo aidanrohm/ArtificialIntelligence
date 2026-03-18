@@ -1,9 +1,8 @@
-#
-# BFS implementation
-# for occupancy grid
-#
-# c 2016 dml
-#
+# 
+# Aidan Rohm - Artificial Intelligence
+# Midterm Exam Question 1
+# Breadth First Search on a grid
+# 
 import math
 import numpy as np
 #
