@@ -51,41 +51,50 @@ def reconstruct_path(meet, f_best, b_best):
 # Bidirectional A* search implementation
 def astar_bidirectional(themap, frontier, goal):
     """Carrying out a bidirectional A* search for a goal from a node in the frontier"""
-    start = frontier[0][0]              # Assuming frontier is initialized with the start node
-    forward_frontier = [[start, 0, []]]       # Forward frontier: (location, cost, path)
-    backward_frontier = [[goal, 0, []]]        # Backward frontier: (location, cost, path)
+    start = frontier[0][0]                     # Assuming frontier is initialized with the start node.
+    forward_frontier = [[start, 0, []]]        # Forward frontier: (location, cost, path).
+    backward_frontier = [[goal, 0, []]]        # Backward frontier: (location, cost, path).
 
     forward_closed = []
     backward_closed = []
 
-    forward_best = {start: [start, 0, []]}      # Best known cost and path to each node in forward search
-    backward_best = {goal: [goal, 0, []]}       # Best known cost and path to each node in backward search
+    forward_best = {start: [start, 0, []]}      # Best known cost and path to each node in forward search.
+    backward_best = {goal: [goal, 0, []]}       # Best known cost and path to each node in backward search.
 
-    forward_expanded = 0            # Counter for nodes expanded in the forward search
-    backward_expanded = 0           # Counter for nodes expanded in the backward search
+    forward_expanded = 0                        # Counter for nodes expanded in the forward search.
+    backward_expanded = 0                       # Counter for nodes expanded in the backward search.
 
     while len(forward_frontier) > 0 and len(backward_frontier) > 0:
         
         # -------- Forward Search Step --------
+        # Follows the same logic as any other A* search.
         forward_frontier.sort(key=lambda n: n[1] +sld(n[0], goal))
         f_location, f_cost, f_path = forward_frontier.pop(0)
 
         if f_location in forward_closed:
             continue
         
+        # This node is now being expanded in the forward search, so we add it to the 
+        # closed list and update the best known path to this node.
         forward_expanded += 1
         forward_closed.append(f_location)
         forward_best[f_location] = [f_location, f_cost, f_path]
 
+        # Checking to see if this specific node has already been expanded in the backward search, 
+        # which would mean the two searches have met.
         if f_location in backward_best:
             fullpath = reconstruct_path(f_location, forward_best, backward_best)
             print(f"Searches met at {f_location}")
             print(f"Forward nodes expanded: {forward_expanded}")
             print(f"Backward nodes expanded: {backward_expanded}")
             return fullpath
-
+        
+        # Generates the successors from the current node and adds them to the frontier 
+        # if they haven't already been expanded in the forward search.
         f_succlist = successor(themap, f_location)
 
+        # The logic for adding nodes to the frontier is the same as in a normal A* search, 
+        # except we also check if the node has already been expanded in the backward search.
         for next_location in f_succlist:
             x, y = int(next_location[0]), int(next_location[1])
             stepcost = themap[x][y]
@@ -108,16 +117,21 @@ def astar_bidirectional(themap, frontier, goal):
                         forward_frontier.append(newnode)
         
         # -------- Backward Search Step --------
+        # Follows the same logic as any other A* search, but in reverse.
         backward_frontier.sort(key=lambda n: n[1] + sld(n[0], start))
         b_location, b_cost, b_path = backward_frontier.pop(0)
 
         if b_location in backward_closed:
             continue
         
+        # This node is now being expanded in the backward search, so we add it to the
+        # closed list and update the best known path to this node.
         backward_expanded += 1
         backward_closed.append(b_location)
         backward_best[b_location] = [b_location, b_cost, b_path]
 
+        # Checking to see if this specific node has already been expanded in the forward search,
+        # which would mean the two searches have met.
         if b_location in forward_best:
             fullpath = reconstruct_path(b_location, forward_best, backward_best)
             print(f"Searches met at {b_location}")
@@ -125,8 +139,12 @@ def astar_bidirectional(themap, frontier, goal):
             print(f"Backward nodes expanded: {backward_expanded}")
             return fullpath
         
+        # Generates the successors from the current node and adds them to the frontier
+        # if they haven't already been expanded in the backward search.
         b_succlist = successor(themap, b_location)
 
+        # The logic for adding nodes to the frontier is the same as in a normal A* search,
+        # except we also check if the node has already been expanded in the forward search.
         for next_location in b_succlist:
             x, y = int(next_location[0]), int(next_location[1])
             stepcost = themap[x][y]
@@ -147,7 +165,8 @@ def astar_bidirectional(themap, frontier, goal):
                             break
                     if not replaced:
                         backward_frontier.append(newnode)
-            
+    
+    # If we exhaust one of the frontiers without the searches meeting, then there is no path from start to goal.
     print(f"No route to {str(goal)}")
     print(f"Forward nodes expanded: {forward_expanded}")
     print(f"Backward nodes expanded: {backward_expanded}")
