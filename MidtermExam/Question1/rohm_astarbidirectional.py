@@ -1,5 +1,5 @@
 # Aidan Rohm
-# Midterm Exam Question 1 Part A
+# Midterm Exam Question 1 Part B
 # Professor Lyons
 # March 19, 2026
 

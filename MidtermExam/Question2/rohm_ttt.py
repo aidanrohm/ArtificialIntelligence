@@ -13,7 +13,7 @@ import tkinter.messagebox
 
 #
 # tttagent.search(state)  is the search method that will be used
-import tttagent as tttagent
+import Question2.rohm_tttagent as rohm_tttagent
 
 #
 tk = Tk()
@@ -78,7 +78,7 @@ class TTTGame:
                 tk.after(5000,tk.quit)
                 return
             
-            action,status = tttagent.mmsearch(self.state)
+            action,status = rohm_tttagent.mmsearch(self.state)
             
             if status and self.board[action[0]][action[1]]["text"]==" ":
                 self.board[action[0]][action[1]]["text"]="O"
@@ -159,5 +159,5 @@ class TTTGame:
 if __name__ == "__main__":
     mygame = TTTGame()
     mygame.run()
-    print("Average total nodes expanded per move in game: ",sum(tttagent.mx.gNodesList)/len(tttagent.mx.gNodesList))
+    print("Average total nodes expanded per move in game: ",sum(rohm_tttagent.mx.gNodesList)/len(rohm_tttagent.mx.gNodesList))
 
